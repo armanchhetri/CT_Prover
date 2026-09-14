@@ -138,7 +138,7 @@ begin
 
   abort "Must specify a single source file." unless ARGV.size == 1
   src = ARGV[0]
-  abort "Source file '#{src}' does not exist." unless File.exists?(src)
+  abort "Source file '#{src}' does not exist." unless File.exist?(src)
 
   src = timed 'Front-end' do
     BAM::process_source_file(src)
@@ -200,5 +200,5 @@ rescue ParseError => e
   end
 
 ensure
-  $temp.each{|f| File.unlink(f) if File.exists?(f)} unless $keep
+  $temp.each{|f| File.unlink(f) if File.exist?(f)} unless $keep
 end

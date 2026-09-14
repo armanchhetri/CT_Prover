@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.0)
+cmake_minimum_required (VERSION 3.5)
 
 # Check if we build within the llvm source tree
 if (DEFINED LLVM_MAIN_SRC_DIR)
@@ -103,11 +103,21 @@ endif()
 configure_file(config.h.in config.h @ONLY)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
+# SVF + Z3 (vendored CT-Prover layout; override with -DCT_SVF_ROOT=... / CONDA_PREFIX)
+if(NOT DEFINED CT_SVF_ROOT)
+  set(CT_SVF_ROOT "${CMAKE_SOURCE_DIR}/../Extern_PTA/SVF")
+endif()
+if(DEFINED ENV{CONDA_PREFIX} AND NOT DEFINED CT_Z3_INCLUDE)
+  set(CT_Z3_INCLUDE "$ENV{CONDA_PREFIX}/include")
+endif()
+if(NOT DEFINED CT_Z3_INCLUDE)
+  set(CT_Z3_INCLUDE "${CT_SVF_ROOT}/z3.obj/include")
+endif()
 include_directories(
-        /home/luwei/newifds/SVF/svf/include
-        /home/luwei/newifds/SVF/svf-llvm/include
-        /home/luwei/newifds/SVF/Release-build/include
-        /home/luwei/newifds/SVF/z3.obj/include)
+        ${CT_SVF_ROOT}/svf/include
+        ${CT_SVF_ROOT}/svf-llvm/include
+        ${CT_SVF_ROOT}/Release-build/include
+        ${CT_Z3_INCLUDE})
 
 include_directories(
   ${PHASAR_SRC_DIR}/include

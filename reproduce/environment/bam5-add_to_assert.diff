@@ -1,0 +1,20 @@
+diff --git a/bam/bam-5/lib/bpl/transformation/shadowing.rb b/bam/bam-5/lib/bpl/transformation/shadowing.rb
+index 6b959bfc..0bd034e1 100644
+--- a/bam/bam-5/lib/bpl/transformation/shadowing.rb
++++ b/bam/bam-5/lib/bpl/transformation/shadowing.rb
+@@ -180,8 +180,14 @@ module Bpl
+       # end
+ 
+       #将不可变变量用require添加到函数中。
++      # CT_Prover Table 3 reproduction fix: emit the same requires line that
++      # bam-7 emits, so bool (bam-7) and shadow (bam-5) Boogie files stay
++      # line-aligned. findbuginboogie.trans_bool_to_shadow marks shadow lines
++      # using line numbers reported on the bool file.
+       def add_to_assert(decl, var)
+-
++        decl.append_children(:specifications,
++                             bpl("requires (#{var} == #{shadow_copy(var)});")
++        )
+       end
+ 
+ 

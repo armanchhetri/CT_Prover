@@ -1,0 +1,24 @@
+hostname: (removed)
+date_captured: 2026-09-13T15:33:44-04:00
+Linux <host> 5.15.0-187-generic #197-Ubuntu SMP Fri Jul 17 19:17:01 UTC 2026 x86_64 x86_64 x86_64 GNU/Linux
+
+Architecture:                            x86_64
+CPU(s):                                  192
+On-line CPU(s) list:                     0-191
+Model name:                              Intel(R) Xeon(R) Platinum 8360H CPU @ 3.00GHz
+Thread(s) per core:                      2
+Core(s) per socket:                      24
+Socket(s):                               4
+CPU max MHz:                             4200.0000
+CPU min MHz:                             1200.0000
+NUMA node(s):                            4
+NUMA node0 CPU(s):                       0-23,96-119
+NUMA node1 CPU(s):                       24-47,120-143
+NUMA node2 CPU(s):                       48-71,144-167
+NUMA node3 CPU(s):                       72-95,168-191
+
+               total        used        free      shared  buff/cache   available
+Mem:           503Gi        10Gi       213Gi        16Mi       279Gi       489Gi
+
+PRETTY_NAME="Ubuntu 22.04.5 LTS"
+VERSION_ID="22.04"

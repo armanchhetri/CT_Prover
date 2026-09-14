@@ -2,13 +2,13 @@
 import sys
 import re
 arg1 = sys.argv[1]
-arg2 = sys.argv[2]
+# Optional 2nd arg (legacy printer mode); find-bug driver uses 1-arg mode
+# that writes errorline.txt for findbuginboogie.py
 def run():
-	poss = []
+	poss = set()
 	file_object = open(arg1, 'r')
 	try:
 		lines = file_object.readlines()
-        # print(type(lines)) 
 	finally:
 		file_object.close()
 
@@ -18,35 +18,24 @@ def run():
 		if re.match(errs, line):
 			tar = re.search(posr, line).group()
 			pos = re.sub(r'\D',"",tar)
-			if pos == "5728":
-				a = 1
-			poss.append(int(pos))
-	tmp = 0
-	num = 0
-	poss = set(poss)
-	# # poss = list(poss)
-	print(len(poss))
-	poss = sorted(poss)
+			poss.add(int(pos))
 
-	file_object = open(arg2, 'r')
-	try:
-		lines = file_object.readlines()
-        # print(type(lines)) 
-	finally:
-		file_object.close()
+	if len(sys.argv) >= 3:
+		arg2 = sys.argv[2]
+		print(len(poss))
+		poss_sorted = sorted(poss)
+		file_object = open(arg2, 'r')
+		try:
+			blines = file_object.readlines()
+		finally:
+			file_object.close()
+		for i in poss_sorted:
+			print(i)
+			print(blines[i-1])
+		return
 
+	set_str = ','.join(map(str, poss))
+	with open("errorline.txt", "w") as file:
+		file.write(set_str)
 
-	for i in poss:
-		print(i)
-		print(lines[i-1])
-	# for item in poss:
-	# 	if item != tmp:
-	# 		print(tmp,end=",")
-	# 		print(num, end="      ")
-	# 		tmp = item
-	# 		num = 1
-	# 	else:
-	# 		num = num + 1
-	# print(tmp,end=" ")
-	# print(num)
 run()

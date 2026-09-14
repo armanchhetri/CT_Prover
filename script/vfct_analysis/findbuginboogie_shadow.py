@@ -78,7 +78,7 @@ def runtillnoerrloopinv(suffix):
 	txtfile = arg1 + "-"+ suffix + "-0"+ ".txt"
 	boogiefile = arg1  + "-"+ suffix +"-0" + ".bpl"
 	# boogiefile2 = arg1 + "-" + suffix + "-2.bpl"
-	time = runcommand("boogie /doModSetAnalysis /errorLimit 0 /timeLimit 21600 " + boogiefile, txtfile)
+	time = runcommand("boogie /doModSetAnalysis /errorLimit 0 /timeLimit 3600 " + boogiefile, txtfile)
 	with open("one_and_three/vrtime-use.txt","a") as file:
 		file.write(f"{time}\t")
 		file.write("\n")
@@ -92,7 +92,7 @@ def runtillnoerrloopinv(suffix):
 	# totaltime = totaltime + time
 	# readerrorline()
 	# txtfile = arg1 + "-" + suffix + "-2.txt"
-	# time = runcommand("boogie /doModSetAnalysis /errorLimit 0 /timeLimit 21600 " + boogiefile2 ,  txtfile)
+	# time = runcommand("boogie /doModSetAnalysis /errorLimit 0 /timeLimit 3600 " + boogiefile2 ,  txtfile)
 	# totaltime = totaltime + time
 
 
@@ -104,7 +104,7 @@ def runtillnoerrloopinv(suffix):
 		totaltime = totaltime + time
 		readerrorline()
 		txtfile = arg1 + "-" + suffix  + str(item + 1) + ".txt"
-		time = runcommand("boogie /doModSetAnalysis /errorLimit 0 /timeLimit 21600 " + boogiefile2 ,  txtfile)
+		time = runcommand("boogie /doModSetAnalysis /errorLimit 0 /timeLimit 3600 " + boogiefile2 ,  txtfile)
 		with open("one_and_three/vrtime-use.txt","a") as file:
 			file.write(f"{time}\t")
 			file.write("\n")

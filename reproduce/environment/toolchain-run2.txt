@@ -1,0 +1,14 @@
+captured: 2026-09-13T19:04:59-04:00
+git HEAD: 0629ddaade7634886b484fafc9a203e3164a69f9
+python: Python 3.10.14
+ruby: ruby 3.2.2 (2023-03-30 revision e51014f9c0) [x86_64-linux]
+z3: Z3 version 4.8.12 - 64 bit
+boogie: Boogie program verifier version 2.9.6.0, Copyright (c) 2003-2014, Microsoft.
+dotnet runtimes:
+Microsoft.NETCore.App 10.0.11 [~/miniforge3/envs/ctprover/lib/dotnet/shared/Microsoft.NETCore.App]
+clang: clang version 12.0.1 (https://github.com/conda-forge/clangdev-feedstock d44358f44aef33e9fa7c5f93e2481ee8f1a04ab6)
+llvm-link (as llvm-link-12):   LLVM version 12.0.1
+phasar: PhASAR v0222
+smack: SMACK version 2.8.0
+kernel: 5.15.0-187-generic
+Description:	Ubuntu 22.04.5 LTS

@@ -1,0 +1,12 @@
+SA_Assignment/
+# build / run artifacts (not part of the reproduction sources)
+__pycache__/
+*.pyc
+phasar/install/
+phasar/env.conda.sh
+phasar/bootstrap.sh.sudo.bak
+Extern_PTA/SVF/Release-build
+reproduce/bin/
+reproduce/runlogs/
+bech/**/one_and_two_and_three.prev.*/
+bech/**/one_and_two_and_three.bak.*/

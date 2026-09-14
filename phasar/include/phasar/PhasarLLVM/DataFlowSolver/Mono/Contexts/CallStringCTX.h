@@ -62,7 +62,7 @@ public:
 
   friend bool operator<(const CallStringCTX<N, K> &Lhs,
                         const CallStringCTX<N, K> &Rhs) {
-    return Lhs.cs < Rhs.cs;
+    return Lhs.CallString < Rhs.CallString;
   }
 
   void print(llvm::raw_ostream &OS) const {
