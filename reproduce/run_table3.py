@@ -120,7 +120,10 @@ def run_job(job: dict, env: dict, logdir: Path, wall: int, results: dict) -> Non
     timed_out = False
     with log.open("w") as lf:
         lf.write(f"# start {start_iso} cwd={work} cmd={' '.join(cmd)} wall_cap={wall}s "
-                 f"DOTNET_GCHeapHardLimit={env.get('DOTNET_GCHeapHardLimit', 'unset')}\n")
+                 f"DOTNET_GCHeapHardLimit={env.get('DOTNET_GCHeapHardLimit', 'unset')} "
+                 f"CT_SPLIT_HERE={env.get('CT_SPLIT_HERE', 'unset')} "
+                 f"CT_VCS_CORES={env.get('CT_VCS_CORES', 'unset')} "
+                 f"CT_TAINT_DIR={env.get('CT_TAINT_DIR', 'unset')}\n")
         lf.flush()
         proc = subprocess.Popen(cmd, cwd=work, env=env, stdout=subprocess.PIPE,
                                 stderr=subprocess.STDOUT, text=True, bufsize=1,
@@ -172,7 +175,20 @@ def main() -> int:
     ap.add_argument("--only", nargs="*", help="bench dirs to run (default: all Table 3 dirs)")
     ap.add_argument("--extra", nargs="*", default=[],
                     help="extra jobs DIR:HEAPHEX (e.g. a copied bench dir for a controlled check)")
+    ap.add_argument("--taint-dir", nargs="*", default=[],
+                    help="DIR:PATH, run steps 2/3 of bench DIR on the step-1 files "
+                         "(<stem>-t.ll, <stem>-taintres.txt) found in PATH")
+    ap.add_argument("--vcs-cores", type=int, default=0,
+                    help="Boogie /vcsCores:n (VC pieces checked in parallel)")
+    ap.add_argument("--split-here", action="store_true",
+                    help="add {:split_here} to every leak assert (one VC piece per assert)")
+    ap.add_argument("--no-split-here", action="store_true",
+                    help="(default) stock single VC; kept for older command lines")
     args = ap.parse_args()
+    taint_dirs = {}
+    for spec in args.taint_dir:
+        d, p = spec.split(":", 1)
+        taint_dirs[d] = str(Path(p).resolve())
 
     logdir = Path(args.logdir)
     logdir.mkdir(parents=True, exist_ok=True)
@@ -196,14 +212,24 @@ def main() -> int:
     bam5 = subprocess.run(["git", "-C", str(CT_ROOT), "diff", "--stat", "--",
                            "bam/bam-5/lib/bpl/transformation/shadowing.rb"],
                           capture_output=True, text=True).stdout.strip()
+    boogie_flags = "/doModSetAnalysis /errorLimit 0 /timeLimit 3600"
+    if args.vcs_cores:
+        boogie_flags += f" /vcsCores:{args.vcs_cores}"
     manifest = {"started": datetime.now().astimezone().isoformat(timespec="seconds"),
                 "ct_root": str(CT_ROOT), "git_head": git, "bam5_patch": bam5,
-                "wall_cap_s": args.wall, "boogie_flags": "/doModSetAnalysis /errorLimit 0 /timeLimit 3600",
+                "wall_cap_s": args.wall, "boogie_flags": boogie_flags,
+                "split_here": bool(args.split_here), "taint_dirs": taint_dirs,
                 "jobs": {}}
     results: dict = {}
     threads = []
     for job in jobs:
         env = build_env(job["heap"])
+        env["CT_SPLIT_HERE"] = "1" if args.split_here else "0"
+        if args.vcs_cores:
+            env["CT_VCS_CORES"] = str(args.vcs_cores)
+        if job["dir"] in taint_dirs:
+            env["CT_TAINT_DIR"] = taint_dirs[job["dir"]]
+            job["taint_dir"] = taint_dirs[job["dir"]]
         print(f"[run] {job['dir']} heap={job['heap']} wall={args.wall}s", flush=True)
         th = threading.Thread(target=run_job, args=(job, env, logdir, args.wall, results))
         th.start()

@@ -15,6 +15,41 @@ CT_ROOT = os.environ.get(
     "CT_ROOT",
     os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")),
 )
+
+# Isolated sites (branch isolated-sites): every leak check
+#   havoc $nondet; assert ($nondet ==> e);
+# gets the Boogie attribute {:split_here}. Boogie then proves one such
+# assertion per VC piece: earlier checks become assumptions and the code
+# after the piece's assertion is left out. Line numbers do not change, so
+# the mark-by-line flow between step 2 and step 3 is untouched.
+# Off unless CT_SPLIT_HERE=1 (the stock single VC is the default; see
+# reproduce/ISOLATED_SITES.md for the measurements). CT_VCS_CORES=n lets
+# Boogie check n pieces at once.
+SPLIT_HERE = os.environ.get("CT_SPLIT_HERE", "0") == "1"
+VCS_CORES = os.environ.get("CT_VCS_CORES", "")
+BOOGIE_FLAGS = "/doModSetAnalysis /errorLimit 0 /timeLimit 3600"
+if VCS_CORES:
+    BOOGIE_FLAGS += " /vcsCores:" + VCS_CORES
+
+LEAK_ASSERT = re.compile(r'^(\s*)assert (\(?\$nondet ==>)')
+
+def add_split_here(bplpath):
+    """Add {:split_here} to every leak-check assert of bplpath, in place.
+    The line count is unchanged. Returns the number of marked asserts."""
+    if not SPLIT_HERE:
+        return 0
+    with open(bplpath, "r") as f:
+        lines = f.readlines()
+    n = 0
+    out = []
+    for line in lines:
+        new, k = LEAK_ASSERT.subn(r'\1assert {:split_here} \2', line, count=1)
+        n += k
+        out.append(new)
+    with open(bplpath, "w") as f:
+        f.writelines(out)
+    print("add_split_here: " + bplpath + ": " + str(n) + " leak asserts marked")
+    return n
 # arg1 前缀名 arg2 bool or shadow
 
 errorline = set()
@@ -81,7 +116,8 @@ def runtillnoerrloopinv(suffix, vertime):
 	txtfile = arg1 + "-"+ suffix + "-0"+ ".txt"
 	boogiefile = arg1  + "-"+ suffix +"-0" + ".bpl"
 	# boogiefile2 = arg1 + "-" + suffix + "-2.bpl"
-	time = runcommand("boogie /doModSetAnalysis /errorLimit 0 /timeLimit 3600 " + boogiefile, txtfile)
+	add_split_here("one_and_two_and_three/" + boogiefile)
+	time = runcommand("boogie " + BOOGIE_FLAGS + " " + boogiefile, txtfile)
 	totaltime = totaltime + time
 	with open("one_and_two_and_three/vrtime-use.txt","a") as file:
 		file.write(f"{time}\t")
@@ -105,7 +141,7 @@ def runtillnoerrloopinv(suffix, vertime):
 		totaltime = totaltime + time
 		readerrorline()
 		txtfile = arg1 + "-" + suffix  + str(item + 1) + ".txt"
-		time = runcommand("boogie /doModSetAnalysis /errorLimit 0 /timeLimit 3600 " + boogiefile2 ,  txtfile)
+		time = runcommand("boogie " + BOOGIE_FLAGS + " " + boogiefile2 ,  txtfile)
 		with open("one_and_two_and_three/vrtime-use.txt","a") as file:
 			file.write(f"{time}\t")
 			file.write("\n")

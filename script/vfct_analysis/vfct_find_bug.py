@@ -224,6 +224,20 @@ def phasar(tkfile, taintentry, taintconfig, outfile, workdir = os.getcwd()):
     #         result = runcommand(phasar_option, outfile)
     return result
 
+def taint_override(item, workdir):
+    """CT_TAINT_DIR=<dir>: after step 1, replace <workdir>/<item>-t.ll (and
+    <item>-taintres.txt) with the copies in <dir>. Used to run steps 2 and 3
+    on the authors' shipped step-1 result when this machine's Phasar build
+    gives a different taint set (P5_1)."""
+    tdir = os.environ.get("CT_TAINT_DIR", "")
+    if not tdir:
+        return
+    for suffix in ("-t.ll", "-taintres.txt"):
+        src = os.path.join(tdir, item + suffix)
+        if os.path.exists(src):
+            runcommand("cp " + src + " " + os.path.join(workdir, item + suffix))
+            print("taint_override: " + src + " -> " + workdir + "/" + item + suffix)
+
 def generatebpl(file, entry, smackout, workdir):
     args = "smack"+" -t --warn silent --verifier=boogie --entry-points "+ entry+" --unroll  "+UNROLL+" --loop-limit " +LOOPLIMIT + " "+ "-bpl "+ smackout+" " + file
     restime = runcommand(args, workdir=workdir)
@@ -389,6 +403,7 @@ def one_and_two_and_three():
 
         restime1 = addkey(file, tkfile, "one_and_two_and_three")
         restime2 = phasar(tkfile, taintentry, taintconfig, outfile, "one_and_two_and_three")
+        taint_override(item, "one_and_two_and_three")
        
         restime3 = generatebpl(taintfile, boogieentry, boogiefile, "one_and_two_and_three")
         restime4 = productbpl(boogiefile, boolboogiefile, AcceptTaint, BoolProduct, SplitAssert,"one_and_two_and_three")
