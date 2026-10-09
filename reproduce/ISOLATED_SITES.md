@@ -100,7 +100,7 @@ hundred seconds and about 4000 s; the split run's step 3 rounds are all above
 ### 3.3 Where the time goes: P6_19 step 2 round 0, traced
 
 A side run of the same `sign-bool-0.bpl` with `/trace /vcsDumpSplits` gives
-per-piece numbers (`reproduce/isolated-sites-p6_19-pieces.csv`, one row per
+per-piece numbers (`reproduce/isolated-sites-pieces/p6_19-step2-round0-limit3600.csv`, one row per
 piece: program-order number, finish order, Z3 seconds, verdict, inlined
 procedure instance, checked variable, bool file line, C site).
 
@@ -140,6 +140,38 @@ skipped step 3 and exited with status 0, so without the log the case looks like
 a clean pass. Splitting cannot change this, because the cost is Boogie's VC
 construction.
 
+### 3.6 Per-site coverage: which sites finish, which one stalls (2026-10-09)
+
+Traced re-runs of single rounds with `/trace /vcsDumpSplits /vcsCores:16` and a
+30 minute piece limit (`/timeLimit 1800`), on the exact files of the split run,
+plus the 2026-10-08 trace of P6_19 (limit 3600). Per-piece tables are in
+`reproduce/isolated-sites-pieces/`. "Simulated wall" is the finish time of a
+site's last piece under 16 workers in program order with the measured piece
+times; the real round adds Boogie's own per-piece cost (about 2 s per piece).
+
+| case, round | marked asserts | pieces | C sites mapped | sites finished (leak / proved) | all finished sites done by | stalled piece |
+|---|---|---|---|---|---|---|
+| P5_1 step 2 r0 | 501 (48 taint sites) | 0 | – | 0 | – | none reached: Boogie out of memory during VC generation after 7278 s |
+| P6_5 step 2 r0 | 268 (89 taint sites) | 1246 | 84 | 84 (50 / 34) | 15 s sim., 213 s real | none; longest piece 5.9 s |
+| P6_5 step 3 r0 | 164 (73 C sites, the 71 step-2 sites + 2 invariant lines) | 765 | 66 | 65 (41 / 24) | 190 s sim. | piece 475 of 765 (62%): `$i104 == $i104.shadow`, the branch at `i15_muladd.c:147` in `br_i15_muladd_small` call 4, shadow line 9240; ran to the 1800 s limit |
+| P6_16 step 2 r0 | 307 (116 taint sites) | 1290 | 106 | 105 (50 / 55) | 52 s sim. | piece 203 of 1290 (16%): `$i24.dup == 0`, loop variable `u = k` of the loop at `i15_decred.c:78` in `br_i15_decode_reduce` call 2, bool line 2983; ran 4248 s although the limit was 1800 s |
+| P6_19 step 2 r0 | 313 (121 taint sites) | 1300 | 104 | 102 (45 / 57) | 69 s sim. | pieces 191, 324, 820 (15%, 25%, 63%): `$i10.dup == 0` at `i31_add.c:36` (calls 7 and 5, bool line 1765) and `$p3.dup == 0` at `i31_sub.c:36` (call 27, line 4548); each ran to the 3600 s limit |
+
+Reading: pieces are dispatched in program order and finish in that order
+(P6_19: mean displacement 7 places), early sites are proved in well under a
+second each, and every site other than the stalled one is settled within a few
+minutes of simulated wall time. The stall is one piece in the middle of the
+program, not the late sites. In each case the stalled assertion is a taint or
+equality check on a loop-carried bignum index inside an inlined helper; the
+stock single VC proves it inside its round 0; the split run reports nothing for
+it (3.4); and from round 1, after the failing loop invariants are removed, both
+runs report it as failing within seconds. Some pieces ignore the per-query
+limit (P6_16: 4248 s under a 1800 s limit).
+
+The 16 to 32 rows of the P6_5 step 3 table that the mapping leaves unattributed
+("unmapped") are wrapper-level pieces whose dumped assertion is already
+simplified by Boogie; all of them finished within the piece maximum above.
+
 ## 4. Conclusion
 
 - Option 2 does not remove the time-outs. Step 2 becomes much slower on P6_16
@@ -172,4 +204,4 @@ hard obligations are hard on every path or only on some; `/rlimit` instead of
   four cases (`one_and_two_and_three.prev.20261008T112932`) were deleted while
   cleaning up after these runs. The reference numbers rest on
   `TABLE3_RESULTS.md` and the logs in `reproduce/runlogs/table3-fixed/`.
-- `reproduce/isolated-sites-p6_19-pieces.csv`: the per-piece table of 3.3.
+- `reproduce/isolated-sites-pieces/`: the per-piece tables of 3.3 and 3.6.
