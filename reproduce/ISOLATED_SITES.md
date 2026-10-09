@@ -13,11 +13,13 @@ to Z3. Details below.
 
 No bam or SMACK change. Three scripts:
 
-| File | Change |
-|---|---|
+
+| File                                      | Change                                                                                                                                                                                                                                                                                                                                                                                       |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `script/vfct_analysis/findbuginboogie.py` | `add_split_here()` rewrites every `assert ($nondet ==> e);` in `<stem>-bool-0.bpl` and `<stem>-shadow-0.bpl` to `assert {:split_here} ($nondet ==> e);` before the first Boogie call of step 2 and step 3. The line count does not change, so the mark-by-line transfer from step 2 to step 3 is untouched. Enabled by `CT_SPLIT_HERE=1` (default off). `CT_VCS_CORES=n` adds `/vcsCores:n`. |
-| `script/vfct_analysis/vfct_find_bug.py` | `taint_override()`: with `CT_TAINT_DIR=<dir>`, the step 1 outputs `<stem>-t.ll` and `<stem>-taintres.txt` are replaced by the copies in `<dir>` after Phasar has run. |
-| `reproduce/run_table3.py` | `--split-here`, `--vcs-cores n`, `--taint-dir DIR:PATH`. The manifest and each log header record the settings. |
+| `script/vfct_analysis/vfct_find_bug.py`   | `taint_override()`: with `CT_TAINT_DIR=<dir>`, the step 1 outputs `<stem>-t.ll` and `<stem>-taintres.txt` are replaced by the copies in `<dir>` after Phasar has run.                                                                                                                                                                                                                        |
+| `reproduce/run_table3.py`                 | `--split-here`, `--vcs-cores n`, `--taint-dir DIR:PATH`. The manifest and each log header record the settings.                                                                                                                                                                                                                                                                               |
+
 
 `bech/Mbed-tls/RSA/authors_taint/` holds the authors' shipped step 1 result for
 P5_1 (48 taint positions), extracted from upstream commit `0629dda`. This
@@ -34,26 +36,31 @@ pieces.
 
 ## 2. Runs
 
-| Run | Command | Cap |
-|---|---|---|
+
+| Run   | Command                                                                                                                                                                                                                                                                           | Cap                                |
+| ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
 | split | `python3 reproduce/run_table3.py --only Mbed-tls/RSA BearSSL/RSA_i15 BearSSL/RSA_i15_pkcs1 BearSSL/RSA_i31_pkcs1 --wall 21600 --heap 0x4000000000 --vcs-cores 16 --split-here --taint-dir Mbed-tls/RSA:bech/Mbed-tls/RSA/authors_taint --logdir reproduce/runlogs/isolated-sites` | 6 h per case, the paper's time-out |
-| stock | same programs copied to `bech/BearSSL/*_stock`, run with the unmodified driver (`--extra ... ` without `--split-here`), `--logdir reproduce/runlogs/isolated-sites-baseline` | 6 h |
+| stock | same programs copied to `bech/BearSSL/*_stock`, run with the unmodified driver (`--extra ...` without `--split-here`), `--logdir reproduce/runlogs/isolated-sites-baseline`                                                                                                       | 6 h                                |
+
 
 The stock run was needed because the earlier reference run (`TABLE3_RESULTS.md`)
 stopped the time-out rows by hand at 1821 s, so it has no step 3 numbers for
-them. Both runs used Boogie 2.9.6, Z3 4.8.12, `/doModSetAnalysis /errorLimit 0
-/timeLimit 3600`, on the same machine at the same time (190 cores, 503 GiB).
+them. Both runs used Boogie 2.9.6, Z3 4.8.12, `/doModSetAnalysis /errorLimit 0 /timeLimit 3600`, on the same machine at the same time (190 cores, 503 GiB).
 
 ## 3. Results
 
+
+
 ### 3.1 Outcome per case
 
-| ID | split run | stock run |
-|---|---|---|
-| P5_1 | step 2: Boogie `OutOfMemoryException` after 7278 s at the 256 GiB heap cap, before any Z3 call | not run (the same Boogie blow-up, see `TABLE3_RESULTS.md`) |
-| P6_5 | step 2 done in 1525 s; step 3 killed at the 6 h cap in round 4 | step 2 done in 1309 s; step 3 killed at the cap in round 8 |
-| P6_16 | step 2 done in 18698 s; step 3 killed at the cap in round 0 | step 2 done in 3236 s; step 3 killed at the cap in round 5 |
-| P6_19 | step 2 killed at the cap in round 5 | step 2 done in 4183 s; step 3 killed at the cap in round 4 |
+
+| ID    | split run                                                                                      | stock run                                                  |
+| ----- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| P5_1  | step 2: Boogie `OutOfMemoryException` after 7278 s at the 256 GiB heap cap, before any Z3 call | not run (the same Boogie blow-up, see `TABLE3_RESULTS.md`) |
+| P6_5  | step 2 done in 1525 s; step 3 killed at the 6 h cap in round 4                                 | step 2 done in 1309 s; step 3 killed at the cap in round 8 |
+| P6_16 | step 2 done in 18698 s; step 3 killed at the cap in round 0                                    | step 2 done in 3236 s; step 3 killed at the cap in round 5 |
+| P6_19 | step 2 killed at the cap in round 5                                                            | step 2 done in 4183 s; step 3 killed at the cap in round 4 |
+
 
 Verdicts: for every round that both runs completed, the set of distinct
 failing lines is identical, with one exception. In P6_5 step 3 round 2 the stock
@@ -68,29 +75,35 @@ product, step 3 the shadow product.
 
 P6_5 (`BearSSL/RSA_i15`):
 
-| | round 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
-|---|---|---|---|---|---|---|---|---|---|
-| step 2 split | 163 | 170 | 170 | 167 | 169 | 172 | 164 | 164 | 176 |
-| step 2 stock | 109 | 169 | 134 | 136 | 140 | 130 | 173 | 151 | 167 |
-| step 3 split | 3747 | 5261 | 3661 | 3798 | killed at cap | | | | |
-| step 3 stock | 3980 | 453 | 1005 | 396 | 4444 | 1238 | 3989 | 4109 | killed at cap |
+
+|              | round 0 | 1    | 2    | 3    | 4             | 5    | 6    | 7    | 8             |
+| ------------ | ------- | ---- | ---- | ---- | ------------- | ---- | ---- | ---- | ------------- |
+| step 2 split | 163     | 170  | 170  | 167  | 169           | 172  | 164  | 164  | 176           |
+| step 2 stock | 109     | 169  | 134  | 136  | 140           | 130  | 173  | 151  | 167           |
+| step 3 split | 3747    | 5261 | 3661 | 3798 | killed at cap |      |      |      |               |
+| step 3 stock | 3980    | 453  | 1005 | 396  | 4444          | 1238 | 3989 | 4109 | killed at cap |
+
 
 P6_16 (`BearSSL/RSA_i15_pkcs1`):
 
-| | round 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
-|---|---|---|---|---|---|---|---|---|---|
-| step 2 split | 4332 | 3669 | 187 | 7747 | 189 | 193 | 186 | 1083 | 1100 |
-| step 2 stock | 225 | 295 | 322 | 402 | 390 | 471 | 366 | 340 | 426 |
-| step 3 split | killed at cap | | | | | | | | |
-| step 3 stock | 1076 | 4246 | 1065 | 5416 | 2475 | killed at cap | | | |
+
+|              | round 0       | 1    | 2    | 3    | 4    | 5             | 6   | 7    | 8    |
+| ------------ | ------------- | ---- | ---- | ---- | ---- | ------------- | --- | ---- | ---- |
+| step 2 split | 4332          | 3669 | 187  | 7747 | 189  | 193           | 186 | 1083 | 1100 |
+| step 2 stock | 225           | 295  | 322  | 402  | 390  | 471           | 366 | 340  | 426  |
+| step 3 split | killed at cap |      |      |      |      |               |     |      |      |
+| step 3 stock | 1076          | 4246 | 1065 | 5416 | 2475 | killed at cap |     |      |      |
+
 
 P6_19 (`BearSSL/RSA_i31_pkcs1`):
 
-| | round 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
-|---|---|---|---|---|---|---|---|---|---|
-| step 2 split | 3767 | 3774 | 226 | 3798 | 6603 | killed at cap | | | |
-| step 2 stock | 325 | 465 | 568 | 443 | 394 | 507 | 417 | 685 | 354 |
-| step 3 stock | 3816 | 4112 | 4370 | 4362 | killed at cap | | | | |
+
+|              | round 0 | 1    | 2    | 3    | 4             | 5             | 6   | 7   | 8   |
+| ------------ | ------- | ---- | ---- | ---- | ------------- | ------------- | --- | --- | --- |
+| step 2 split | 3767    | 3774 | 226  | 3798 | 6603          | killed at cap |     |     |     |
+| step 2 stock | 325     | 465  | 568  | 443  | 394           | 507           | 417 | 685 | 354 |
+| step 3 stock | 3816    | 4112 | 4370 | 4362 | killed at cap |               |     |     |     |
+
 
 So the stock tool also fails all three BearSSL cases within 6 h on this machine,
 in step 3, as the paper reports. Its step 3 rounds alternate between a few
@@ -105,21 +118,23 @@ piece: program-order number, finish order, Z3 seconds, verdict, inlined
 procedure instance, checked variable, bool file line, C site).
 
 - 1300 pieces. 1297 finish with median 0.12 s, 90th percentile 1.0 s, maximum
-  23 s, 838 s of Z3 time in total. 1011 are valid and 286 invalid; the invalid
-  set equals the stock run's error set.
+23 s, 838 s of Z3 time in total. 1011 are valid and 286 invalid; the invalid
+set equals the stock run's error set.
 - Boogie hands pieces to the 16 Z3 workers in program order and the finish
-  order tracks it: piece 100 finished 98th, piece 900 finished 893rd, mean
-  displacement 7 places. Early sites are indeed verified early.
+order tracks it: piece 100 finished 98th, piece 900 finished 893rd, mean
+displacement 7 places. Early sites are indeed verified early.
 - 3 pieces hit the 3600 s limit: numbers 191, 324 and 820, that is 15%, 25% and
-  63% through the program. They check `$i10.dup == 0` in `br_i31_add` inlined
-  calls 7 and 5 (`i31_add.c:36`, bool line 1765) and `$p3.dup == 0` in
-  `br_i31_sub` call 27 (`i31_sub.c:36`, bool line 4548). The stock single VC
-  proves these three inside its 325 s round 0. In round 1, after the invariant
-  removal, both runs report them as failing.
+63% through the program. They check `$i10.dup == 0` in `br_i31_add` inlined
+calls 7 and 5 (`i31_add.c:36`, bool line 1765) and `$p3.dup == 0` in
+`br_i31_sub` call 27 (`i31_sub.c:36`, bool line 4548). The stock single VC
+proves these three inside its 325 s round 0. In round 1, after the invariant
+removal, both runs report them as failing.
 - Round time is therefore the per-query limit whenever one piece is hard, plus
-  the queue: a round with more hard pieces than workers takes several limits
-  (P6_16 round 3: 7747 s; P6_19 round 4: 6603 s). In those rounds single Z3
-  processes also ran past 3600 s of CPU, so Z3's soft limit is not a bound.
+the queue: a round with more hard pieces than workers takes several limits
+(P6_16 round 3: 7747 s; P6_19 round 4: 6603 s). In those rounds single Z3
+processes also ran past 3600 s of CPU, so Z3's soft limit is not a bound.
+
+
 
 ### 3.4 Reporting hazard with split pieces in Boogie 2.9.6
 
@@ -149,13 +164,15 @@ plus the 2026-10-08 trace of P6_19 (limit 3600). Per-piece tables are in
 site's last piece under 16 workers in program order with the measured piece
 times; the real round adds Boogie's own per-piece cost (about 2 s per piece).
 
-| case, round | marked asserts | pieces | C sites mapped | sites finished (leak / proved) | all finished sites done by | stalled piece |
-|---|---|---|---|---|---|---|
-| P5_1 step 2 r0 | 501 (48 taint sites) | 0 | – | 0 | – | none reached: Boogie out of memory during VC generation after 7278 s |
-| P6_5 step 2 r0 | 268 (89 taint sites) | 1246 | 84 | 84 (50 / 34) | 15 s sim., 213 s real | none; longest piece 5.9 s |
-| P6_5 step 3 r0 | 164 (73 C sites, the 71 step-2 sites + 2 invariant lines) | 765 | 66 | 65 (41 / 24) | 190 s sim. | piece 475 of 765 (62%): `$i104 == $i104.shadow`, the branch at `i15_muladd.c:147` in `br_i15_muladd_small` call 4, shadow line 9240; ran to the 1800 s limit |
-| P6_16 step 2 r0 | 307 (116 taint sites) | 1290 | 106 | 105 (50 / 55) | 52 s sim. | piece 203 of 1290 (16%): `$i24.dup == 0`, loop variable `u = k` of the loop at `i15_decred.c:78` in `br_i15_decode_reduce` call 2, bool line 2983; ran 4248 s although the limit was 1800 s |
-| P6_19 step 2 r0 | 313 (121 taint sites) | 1300 | 104 | 102 (45 / 57) | 69 s sim. | pieces 191, 324, 820 (15%, 25%, 63%): `$i10.dup == 0` at `i31_add.c:36` (calls 7 and 5, bool line 1765) and `$p3.dup == 0` at `i31_sub.c:36` (call 27, line 4548); each ran to the 3600 s limit |
+
+| case, round     | marked asserts                                            | pieces | C sites mapped | sites finished (leak / proved) | all finished sites done by | stalled piece                                                                                                                                                                                   |
+| --------------- | --------------------------------------------------------- | ------ | -------------- | ------------------------------ | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| P5_1 step 2 r0  | 501 (48 taint sites)                                      | 0      | –              | 0                              | –                          | none reached: Boogie out of memory during VC generation after 7278 s                                                                                                                            |
+| P6_5 step 2 r0  | 268 (89 taint sites)                                      | 1246   | 84             | 84 (50 / 34)                   | 15 s sim., 213 s real      | none; longest piece 5.9 s                                                                                                                                                                       |
+| P6_5 step 3 r0  | 164 (73 C sites, the 71 step-2 sites + 2 invariant lines) | 765    | 66             | 65 (41 / 24)                   | 190 s sim.                 | piece 475 of 765 (62%): `$i104 == $i104.shadow`, the branch at `i15_muladd.c:147` in `br_i15_muladd_small` call 4, shadow line 9240; ran to the 1800 s limit                                    |
+| P6_16 step 2 r0 | 307 (116 taint sites)                                     | 1290   | 106            | 105 (50 / 55)                  | 52 s sim.                  | piece 203 of 1290 (16%): `$i24.dup == 0`, loop variable `u = k` of the loop at `i15_decred.c:78` in `br_i15_decode_reduce` call 2, bool line 2983; ran 4248 s although the limit was 1800 s     |
+| P6_19 step 2 r0 | 313 (121 taint sites)                                     | 1300   | 104            | 102 (45 / 57)                  | 69 s sim.                  | pieces 191, 324, 820 (15%, 25%, 63%): `$i10.dup == 0` at `i31_add.c:36` (calls 7 and 5, bool line 1765) and `$p3.dup == 0` at `i31_sub.c:36` (call 27, line 4548); each ran to the 3600 s limit |
+
 
 Reading: pieces are dispatched in program order and finish in that order
 (P6_19: mean displacement 7 places), early sites are proved in well under a
@@ -175,17 +192,19 @@ simplified by Boogie; all of them finished within the piece maximum above.
 ## 4. Conclusion
 
 - Option 2 does not remove the time-outs. Step 2 becomes much slower on P6_16
-  and P6_19 (18698 s against 3236 s; not finished against 4183 s). On P6_5 step
-  3 the first round is roughly equal (3747 s against 3980 s) and the later rounds
-  are slower (5261 s against 453 s).
+and P6_19 (18698 s against 3236 s; not finished against 4183 s). On P6_5 step
+3 the first round is roughly equal (3747 s against 3980 s) and the later rounds
+are slower (5261 s against 453 s).
 - The verdicts do not change, except that a timed-out piece disappears from the
-  report.
+report.
 - The expensive obligations are a handful of taint checks in the inlined bignum
-  helpers, mid-program, which the combined VC proves cheaply and the isolated
-  query does not. Why the isolated query is harder is open. One hypothesis is
-  that in the single VC Boogie's error loop keeps the same Z3 session across the
-  reported errors, so the final proof reuses what was learnt.
+helpers, mid-program, which the combined VC proves cheaply and the isolated
+query does not. Why the isolated query is harder is open. One hypothesis is
+that in the single VC Boogie's error loop keeps the same Z3 session across the
+reported errors, so the final proof reuses what was learnt.
 - P5_1 needs a smaller VC (or a smaller product) before any splitting matters.
+
+
 
 ## 4.1 Perspective one: what each piece asks the solver
 
@@ -195,15 +214,13 @@ counterexample; the driver prints "might not hold") or "no" (a proof). The cost
 depends on which answer is true and on how much of the program the answer
 rests on. Three kinds of pieces occur.
 
-**Kind 1, leak sites: the answer is yes.** Example: `assert $nondet ==>
-$i13.dup == 0` in `montymul`, where `$i13` is a loop index taken from the secret
+**Kind 1, leak sites: the answer is yes.** Example: `assert $nondet ==> $i13.dup == 0` in `montymul`, where `$i13` is a loop index taken from the secret
 exponent. A taint bit of 1 can reach it, so Z3 looks for one execution, finds
 it and stops. Finding one execution is cheap even when the prefix is long,
 because Z3 may pick values freely for everything that is not on the way. About
 290 pieces per case; they are the errors in the report.
 
-**Kind 2, easy proofs: the answer is no, for a local reason.** Example: `assert
-$nondet ==> $p46.dup == 0` in `sig_pad`, where `$p46` is the public buffer
+**Kind 2, easy proofs: the answer is no, for a local reason.** Example: `assert $nondet ==> $p46.dup == 0` in `sig_pad`, where `$p46` is the public buffer
 pointer plus a constant, so its taint bit is `0 | 0`. Or a check on a loop
 variable for which bam has put `assert {:shadow_invariant} $i24.dup == 0` at
 the loop head, which Boogie assumes at the top of every iteration. The
@@ -231,33 +248,33 @@ from the modulus header is used. The stalled site of P6_16, the loop start
 Two more facts shape what is worth optimising:
 
 - In round 0 the hard proof succeeds only because of a loop invariant that
-  Boogie assumes. The same round reports that invariant as failing elsewhere.
-  The driver comments it out and reruns, and in round 1 the hard check is a
-  kind 1 piece: a counterexample exists and is found in seconds.
+Boogie assumes. The same round reports that invariant as failing elsewhere.
+The driver comments it out and reruns, and in round 1 the hard check is a
+kind 1 piece: a counterexample exists and is found in seconds.
 - The driver keeps only the invariant failures of the intermediate rounds and
-  the assertion verdicts of the final round. Every assertion proof done in a
-  non-final round is thrown away. The hard proofs that cost P6_16 three rounds
-  of one to two hours each were all discarded.
+the assertion verdicts of the final round. Every assertion proof done in a
+non-final round is thrown away. The hard proofs that cost P6_16 three rounds
+of one to two hours each were all discarded.
 
 The levers this perspective gives:
 
 - **Do not prove assertions in intermediate rounds.** Run the rounds with the
-  leak asserts disabled until the set of loop invariants is stable, then check
-  the sites once. Invariant failures do not depend on the leak asserts, because
-  `$nondet` makes a leak assert contribute nothing as an assumption. This
-  removes the discarded work from both the split and the stock pipeline, and in
-  the observed cases the hard obligations have turned into cheap leaks by the
-  time the final round runs. A driver change only.
+leak asserts disabled until the set of loop invariants is stable, then check
+the sites once. Invariant failures do not depend on the leak asserts, because
+`$nondet` makes a leak assert contribute nothing as an assumption. This
+removes the discarded work from both the split and the stock pipeline, and in
+the observed cases the hard obligations have turned into cheap leaks by the
+time the final round runs. A driver change only.
 - **Give the solver the global fact as a local one.** The hard proof needs
-  "the modulus header is public". Stating it once, as a precondition on the
-  memory cell for the bignum helpers or as an invariant at the loop that reads
-  it, turns a kind 3 piece into a kind 2 piece. bam already emits
-  `requires x == x.shadow` for untainted scalar arguments; what is missing is
-  the same statement for the memory cell behind a pointer argument.
+"the modulus header is public". Stating it once, as a precondition on the
+memory cell for the bignum helpers or as an invariant at the loop that reads
+it, turns a kind 3 piece into a kind 2 piece. bam already emits
+`requires x == x.shadow` for untainted scalar arguments; what is missing is
+the same statement for the memory cell behind a pointer argument.
 - **Weaken the memory axioms for the proof.** The quantified `memcpy` and
-  `memset` models are the expensive part of the chain. A bounded or summarised
-  version for the specific copies that write the modulus removes most of the
-  instantiation work.
+`memset` models are the expensive part of the chain. A bounded or summarised
+version for the specific copies that write the modulus removes most of the
+instantiation work.
 
 Not pursued: slicing the prefix of the hard pieces (already tried in the
 earlier site-slicing work) and keeping the hard obligations together in one
@@ -277,28 +294,28 @@ that Boogie runs out of memory before it asks Z3 anything. A procedure in the
 prefix of a piece can be treated in three ways, and each is a different proof.
 
 - *Remove it* when the piece does not depend on it: no remaining check sits
-  inside it, nothing it writes (return values, the memory maps, the error flag,
-  their `.dup` and `.shadow` copies) is read on the way to the check, and it
-  decides no branch or index on that way. This is a dependence slice. Boogie's
-  pieces already remove everything after the check, and the hard pieces stall
-  with that done, so what is left to remove is prefix code the proof does not
-  use. Slicing has been tried; not pursued further.
+inside it, nothing it writes (return values, the memory maps, the error flag,
+their `.dup` and `.shadow` copies) is read on the way to the check, and it
+decides no branch or index on that way. This is a dependence slice. Boogie's
+pieces already remove everything after the check, and the hard pieces stall
+with that done, so what is left to remove is prefix code the proof does not
+use. Slicing has been tried; not pursued further.
 - *Summarize it* when the caller uses only a few facts about it. The body is
-  checked once against a contract; every call then havocs what the body may
-  write and assumes the contract. The contract must list everything the body
-  writes (a missing map or flag makes the caller treat it as unchanged), must
-  say that the outputs the caller still reads agree across the two runs when
-  the inputs agree, and must say how the taint of a tainted output depends on
-  the inputs, otherwise a later branch on that output is nondeterministic and
-  the sink fails even if the code is constant-time. It need not carry the limb
-  products, the loop index or the numeric result; those are the bulk of the
-  body. The hard proofs found here need only one such fact, "the modulus header
-  is public", at the entry of the bignum helpers. That one-line contract is the
-  first thing to test. Full summaries, with frames over SMACK's maps, are the
-  quantified `ensures` cost the earlier design note warned about; they come
-  after, and they are also the only route that shrinks P5_1's VC.
+checked once against a contract; every call then havocs what the body may
+write and assumes the contract. The contract must list everything the body
+writes (a missing map or flag makes the caller treat it as unchanged), must
+say that the outputs the caller still reads agree across the two runs when
+the inputs agree, and must say how the taint of a tainted output depends on
+the inputs, otherwise a later branch on that output is nondeterministic and
+the sink fails even if the code is constant-time. It need not carry the limb
+products, the loop index or the numeric result; those are the bulk of the
+body. The hard proofs found here need only one such fact, "the modulus header
+is public", at the entry of the bignum helpers. That one-line contract is the
+first thing to test. Full summaries, with frames over SMACK's maps, are the
+quantified `ensures` cost the earlier design note warned about; they come
+after, and they are also the only route that shrinks P5_1's VC.
 - *Keep it* when a check sits inside it, or when the fact the caller needs
-  holds only at this call. The kept bodies are where the next two parts live.
+holds only at this call. The kept bodies are where the next two parts live.
 
 **Multiplications in a kept body.** On the whole step 3 query of P6_5,
 abstracting the multiplications of two variables removed about 74% of Z3's
@@ -325,27 +342,29 @@ havocs every limb, and `memcpy`/`memset` on the map are quantified axioms
 (about 9% of decisions on P6_5).
 
 - Separate maps per bignum object would let a summary havoc only what it
-  writes. It needs a pointer analysis that tells bignums apart, which the
-  current one does not, and it pays off only once summaries exist. Not now.
+writes. It needs a pointer analysis that tells bignums apart, which the
+current one does not, and it pays off only once summaries exist. Not now.
 - When the length of a copy is public, the copy is a finite list of updates
-  instead of a quantified axiom. A secret length cannot be fixed; it is itself
-  a leak. This is the third lever of perspective one, modest in size, kept.
+instead of a quantified axiom. A secret length cannot be fixed; it is itself
+a leak. This is the third lever of perspective one, modest in size, kept.
 - Dropping the shadow map after a resynchronization is not sound: the two runs
-  differ in the secret limbs by construction, so the maps never agree as a
-  whole. bam-991's per-variable resets are the sound form of this idea and are
-  already in place.
+differ in the secret limbs by construction, so the maps never agree as a
+whole. bam-991's per-variable resets are the sound form of this idea and are
+already in place.
+
+
 
 ## 4.3 What to try next, in order
 
 1. **Uninterpreted multiplication of two variables**, tested on the dumped
-   stalled pieces with a 30 minute limit. Decisive in an afternoon.
+  stalled pieces with a 30 minute limit.
 2. **The one-fact contract**: `m[0]` equal across the runs and untainted at the
-   entry of the bignum helpers, tested the same way by adding the assumption at
+  entry of the bignum helpers, tested the same way by adding the assumption at
    the top of a stalled piece.
 3. **Invariant-first rounds** in the driver, which removes the discarded proofs
-   whatever the solver outcome.
+  whatever the solver outcome.
 4. **Bounded copies for public lengths**, if the remaining hard pieces still
-   spend their time in quantifier instantiation.
+  spend their time in quantifier instantiation.
 
 Summaries proper come after item 2 shows whether a local fact is enough. P5_1
 stays blocked on Boogie memory until the inlined body count drops, which only
@@ -354,12 +373,13 @@ the summary route addresses.
 ## 5. Files
 
 - `reproduce/runlogs/isolated-sites/` (not tracked): logs, `manifest.json`,
-  `outputs/<bench>/` with every Boogie report and `vrtime-use.txt`,
-  `p6_19-step2-round0-trace.out`.
+`outputs/<bench>/` with every Boogie report and `vrtime-use.txt`,
+`p6_19-step2-round0-trace.out`.
 - `reproduce/runlogs/isolated-sites-baseline/`: the stock run, with
-  `outputs/<bench>/` reports.
+`outputs/<bench>/` reports.
 - Note: the raw output directories of the 2026-09-13 reference run for these
-  four cases (`one_and_two_and_three.prev.20261008T112932`) were deleted while
-  cleaning up after these runs. The reference numbers rest on
-  `TABLE3_RESULTS.md` and the logs in `reproduce/runlogs/table3-fixed/`.
+four cases (`one_and_two_and_three.prev.20261008T112932`) were deleted while
+cleaning up after these runs. The reference numbers rest on
+`TABLE3_RESULTS.md` and the logs in `reproduce/runlogs/table3-fixed/`.
 - `reproduce/isolated-sites-pieces/`: the per-piece tables of 3.3 and 3.6.
+
