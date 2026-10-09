@@ -187,11 +187,82 @@ simplified by Boogie; all of them finished within the piece maximum above.
   reported errors, so the final proof reuses what was learnt.
 - P5_1 needs a smaller VC (or a smaller product) before any splitting matters.
 
-Things this measurement suggests trying next: a per-site file with the suffix
-cut and the prefix sliced (option 1 of the earlier survey) for exactly the
-hard sites; `/vcsMaxKeepGoingSplits` with a short piece limit to see whether the
-hard obligations are hard on every path or only on some; `/rlimit` instead of
-`/timeLimit` so that a piece cannot run past its budget.
+## 4.1 Why one piece is hard and its neighbours are not
+
+Every piece is a question to Z3: "is there an execution of the code before
+this site in which the check fails?" Z3 answers either "yes, here is one" (a
+counterexample; the driver prints "might not hold") or "no" (a proof). The cost
+depends on which answer is true and on how much of the program the answer
+rests on. Three kinds of pieces occur.
+
+**Kind 1, leak sites: the answer is yes.** Example: `assert $nondet ==>
+$i13.dup == 0` in `montymul`, where `$i13` is a loop index taken from the secret
+exponent. A taint bit of 1 can reach it, so Z3 looks for one execution, finds
+it and stops. Finding one execution is cheap even when the prefix is long,
+because Z3 may pick values freely for everything that is not on the way. About
+290 pieces per case; they are the errors in the report.
+
+**Kind 2, easy proofs: the answer is no, for a local reason.** Example: `assert
+$nondet ==> $p46.dup == 0` in `sig_pad`, where `$p46` is the public buffer
+pointer plus a constant, so its taint bit is `0 | 0`. Or a check on a loop
+variable for which bam has put `assert {:shadow_invariant} $i24.dup == 0` at
+the loop head, which Boogie assumes at the top of every iteration. The
+negation contradicts a fact one or two steps away and Z3 never has to look at
+the rest of the prefix. About 1000 pieces per case, a tenth of a second each.
+
+**Kind 3, hard proofs: the answer is no, for a global reason.** Take the guard
+`u <= mlen` at `i15_muladd.c:147`. The product asks whether `mlen` and its
+shadow copy are equal in the two runs. `mlen` comes from `m[0]`, and `m[0]` is
+a load from memory. In SMACK's encoding memory is one map, and the value of
+`m[0]` here is "the map after every store since the program started, read at
+address m". To prove that the two runs agree, Z3 has to show that none of the
+hundreds of earlier stores, in either run, made that cell differ. Stores made
+by `memcpy` and `memset` are described by quantified axioms, which Z3 can only
+use by guessing instantiations. Loops in between are not unrolled: Boogie cuts
+them, havocs what they modify and assumes the loop invariants, so the proof
+also has to pick the right invariant at the right loop head and connect it to
+this cell. The negation of the check is consistent with everything local, so
+Z3 is forced into case splits over the whole chain. That is why one such piece
+runs for an hour while its neighbours take a tenth of a second. The position in
+the program is incidental: this is simply the first place where a bound derived
+from the modulus header is used. The stalled site of P6_16, the loop start
+`k = mblen - 1` at `i15_decred.c:78`, is the same situation.
+
+Two more facts shape what is worth optimising:
+
+- In round 0 the hard proof succeeds only because of a loop invariant that
+  Boogie assumes. The same round reports that invariant as failing elsewhere.
+  The driver comments it out and reruns, and in round 1 the hard check is a
+  kind 1 piece: a counterexample exists and is found in seconds.
+- The driver keeps only the invariant failures of the intermediate rounds and
+  the assertion verdicts of the final round. Every assertion proof done in a
+  non-final round is thrown away. The hard proofs that cost P6_16 three rounds
+  of one to two hours each were all discarded.
+
+## 4.2 What to try next
+
+1. **Do not prove assertions in intermediate rounds.** Run the rounds with the
+   leak asserts disabled until the set of loop invariants is stable, then check
+   the sites once. Invariant failures do not depend on the leak asserts, because
+   `$nondet` makes a leak assert contribute nothing as an assumption. This
+   removes the discarded work from both the split and the stock pipeline, and in
+   the observed cases the hard obligations have turned into cheap leaks by the
+   time the final round runs. A driver change only.
+2. **Give the solver the global fact as a local one.** The hard proof needs
+   "the modulus header is public". Stating it once, as a precondition on the
+   memory cell for the bignum helpers or as an invariant at the loop that reads
+   it, turns a kind 3 piece into a kind 2 piece. bam already emits
+   `requires x == x.shadow` for untainted scalar arguments; what is missing is
+   the same statement for the memory cell behind a pointer argument.
+3. **Weaken the memory axioms for the proof.** The quantified `memcpy` and
+   `memset` models are the expensive part of the chain. A bounded or summarised
+   version for the specific copies that write the modulus removes most of the
+   instantiation work.
+
+Not pursued: slicing the prefix of the hard pieces (already tried in the
+earlier site-slicing work) and keeping the hard obligations together in one
+query (a query that contains a too-hard piece takes the time of that piece
+whatever else is in it).
 
 ## 5. Files
 
