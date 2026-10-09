@@ -187,7 +187,7 @@ simplified by Boogie; all of them finished within the piece maximum above.
   reported errors, so the final proof reuses what was learnt.
 - P5_1 needs a smaller VC (or a smaller product) before any splitting matters.
 
-## 4.1 Why one piece is hard and its neighbours are not
+## 4.1 Perspective one: what each piece asks the solver
 
 Every piece is a question to Z3: "is there an execution of the code before
 this site in which the check fails?" Z3 answers either "yes, here is one" (a
@@ -239,30 +239,117 @@ Two more facts shape what is worth optimising:
   non-final round is thrown away. The hard proofs that cost P6_16 three rounds
   of one to two hours each were all discarded.
 
-## 4.2 What to try next
+The levers this perspective gives:
 
-1. **Do not prove assertions in intermediate rounds.** Run the rounds with the
-   leak asserts disabled until the set of loop invariants is stable, then check
-   the sites once. Invariant failures do not depend on the leak asserts, because
-   `$nondet` makes a leak assert contribute nothing as an assumption. This
-   removes the discarded work from both the split and the stock pipeline, and in
-   the observed cases the hard obligations have turned into cheap leaks by the
-   time the final round runs. A driver change only.
-2. **Give the solver the global fact as a local one.** The hard proof needs
-   "the modulus header is public". Stating it once, as a precondition on the
-   memory cell for the bignum helpers or as an invariant at the loop that reads
-   it, turns a kind 3 piece into a kind 2 piece. bam already emits
-   `requires x == x.shadow` for untainted scalar arguments; what is missing is
-   the same statement for the memory cell behind a pointer argument.
-3. **Weaken the memory axioms for the proof.** The quantified `memcpy` and
-   `memset` models are the expensive part of the chain. A bounded or summarised
-   version for the specific copies that write the modulus removes most of the
-   instantiation work.
+- **Do not prove assertions in intermediate rounds.** Run the rounds with the
+  leak asserts disabled until the set of loop invariants is stable, then check
+  the sites once. Invariant failures do not depend on the leak asserts, because
+  `$nondet` makes a leak assert contribute nothing as an assumption. This
+  removes the discarded work from both the split and the stock pipeline, and in
+  the observed cases the hard obligations have turned into cheap leaks by the
+  time the final round runs. A driver change only.
+- **Give the solver the global fact as a local one.** The hard proof needs
+  "the modulus header is public". Stating it once, as a precondition on the
+  memory cell for the bignum helpers or as an invariant at the loop that reads
+  it, turns a kind 3 piece into a kind 2 piece. bam already emits
+  `requires x == x.shadow` for untainted scalar arguments; what is missing is
+  the same statement for the memory cell behind a pointer argument.
+- **Weaken the memory axioms for the proof.** The quantified `memcpy` and
+  `memset` models are the expensive part of the chain. A bounded or summarised
+  version for the specific copies that write the modulus removes most of the
+  instantiation work.
 
 Not pursued: slicing the prefix of the hard pieces (already tried in the
 earlier site-slicing work) and keeping the hard obligations together in one
 query (a query that contains a too-hard piece takes the time of that piece
 whatever else is in it).
+
+## 4.2 Perspective two: three parts of the product that make the hard question hard
+
+Perspective one looks at the question. This one looks at the formula the
+question is asked over. Three parts of it are responsible for most of the
+work.
+
+**Inlined procedures.** `{:inline 1}` pastes every callee into its caller, and
+that compounds down the call graph: P6_5's product has 84 procedures and 1,155
+call statements, P5_1's has 116 and 1,697, and after inlining P5_1 is so large
+that Boogie runs out of memory before it asks Z3 anything. A procedure in the
+prefix of a piece can be treated in three ways, and each is a different proof.
+
+- *Remove it* when the piece does not depend on it: no remaining check sits
+  inside it, nothing it writes (return values, the memory maps, the error flag,
+  their `.dup` and `.shadow` copies) is read on the way to the check, and it
+  decides no branch or index on that way. This is a dependence slice. Boogie's
+  pieces already remove everything after the check, and the hard pieces stall
+  with that done, so what is left to remove is prefix code the proof does not
+  use. Slicing has been tried; not pursued further.
+- *Summarize it* when the caller uses only a few facts about it. The body is
+  checked once against a contract; every call then havocs what the body may
+  write and assumes the contract. The contract must list everything the body
+  writes (a missing map or flag makes the caller treat it as unchanged), must
+  say that the outputs the caller still reads agree across the two runs when
+  the inputs agree, and must say how the taint of a tainted output depends on
+  the inputs, otherwise a later branch on that output is nondeterministic and
+  the sink fails even if the code is constant-time. It need not carry the limb
+  products, the loop index or the numeric result; those are the bulk of the
+  body. The hard proofs found here need only one such fact, "the modulus header
+  is public", at the entry of the bignum helpers. That one-line contract is the
+  first thing to test. Full summaries, with frames over SMACK's maps, are the
+  quantified `ensures` cost the earlier design note warned about; they come
+  after, and they are also the only route that shrinks P5_1's VC.
+- *Keep it* when a check sits inside it, or when the fact the caller needs
+  holds only at this call. The kept bodies are where the next two parts live.
+
+**Multiplications in a kept body.** On the whole step 3 query of P6_5,
+abstracting the multiplications of two variables removed about 74% of Z3's
+decisions, `montymul` alone 68%. Inlining multiplies that cost by the number of
+kept copies. The abstraction that is safe for constant time: replace `x * y` by
+an uninterpreted function `f(x, y)`. `f` still gives equal results for equal
+inputs, which is all an equality or taint check ever needs; it loses only
+arithmetic facts such as carry bounds, which belong to functional correctness,
+not to constant time. The products have few such sites (23 in P6_5, 10 in P5_1;
+multiplications by a constant stay as they are, so pointer arithmetic is
+untouched), and the rewrite is a text change. Two cautions: the percentages
+were measured on a query that returned `unknown`, not on the pieces that stall,
+so the first test is on the dumped stalled pieces; and a counterexample found
+under the abstraction may be spurious and has to be replayed on the original
+product. Not pursued: moving to bit-vectors (bit-vector mode crashes bam-7, and
+a bit-blasted 32-bit multiplier is not cheaper for Z3), and "compute the
+product once for both runs", which the uninterpreted function already gives.
+
+**One memory map for every bignum and both runs.** In BearSSL's products the
+headers and limbs of every bignum live in one map, `$M.0`; Mbed TLS's P5_1 has
+`$M.0` and `$M.1`. Step 2 and step 3 duplicate the map (`.dup`, `.shadow`). A
+store is a case split over addresses, a summary whose frame is the whole map
+havocs every limb, and `memcpy`/`memset` on the map are quantified axioms
+(about 9% of decisions on P6_5).
+
+- Separate maps per bignum object would let a summary havoc only what it
+  writes. It needs a pointer analysis that tells bignums apart, which the
+  current one does not, and it pays off only once summaries exist. Not now.
+- When the length of a copy is public, the copy is a finite list of updates
+  instead of a quantified axiom. A secret length cannot be fixed; it is itself
+  a leak. This is the third lever of perspective one, modest in size, kept.
+- Dropping the shadow map after a resynchronization is not sound: the two runs
+  differ in the secret limbs by construction, so the maps never agree as a
+  whole. bam-991's per-variable resets are the sound form of this idea and are
+  already in place.
+
+## 4.3 What to try next, in order
+
+1. **Uninterpreted multiplication of two variables**, tested on the dumped
+   stalled pieces with a 30 minute limit. Decisive in an afternoon.
+2. **The one-fact contract**: `m[0]` equal across the runs and untainted at the
+   entry of the bignum helpers, tested the same way by adding the assumption at
+   the top of a stalled piece.
+3. **Invariant-first rounds** in the driver, which removes the discarded proofs
+   whatever the solver outcome.
+4. **Bounded copies for public lengths**, if the remaining hard pieces still
+   spend their time in quantifier instantiation.
+
+Summaries proper come after item 2 shows whether a local fact is enough. P5_1
+stays blocked on Boogie memory until the inlined body count drops, which only
+the summary route addresses.
 
 ## 5. Files
 
