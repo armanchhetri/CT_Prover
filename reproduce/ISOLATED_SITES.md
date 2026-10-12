@@ -155,39 +155,75 @@ skipped step 3 and exited with status 0, so without the log the case looks like
 a clean pass. Splitting cannot change this, because the cost is Boogie's VC
 construction.
 
-### 3.6 Per-site coverage: which sites finish, which one stalls (2026-10-09)
+### 3.6 Which assertion hits the limit, per round (revised 2026-10-12)
 
-Traced re-runs of single rounds with `/trace /vcsDumpSplits /vcsCores:16` and a
-30 minute piece limit (`/timeLimit 1800`), on the exact files of the split run,
-plus the 2026-10-08 trace of P6_19 (limit 3600). Per-piece tables are in
-`reproduce/isolated-sites-pieces/`. "Simulated wall" is the finish time of a
-site's last piece under 16 workers in program order with the measured piece
-times; the real round adds Boogie's own per-piece cost (about 2 s per piece).
+This section replaces the first version of 3.6 (2026-10-09), whose assertion
+names were off by one piece: Boogie numbers the dumped pieces from 0 and the
+trace from 1, so dump file k holds trace piece k+1. The corrected mapping is
+confirmed two ways: on a toy program, and by the fact that the "Invalid at the
+limit" piece of P6_5 step 3 round 0 (trace piece 475) has its assertion, shadow
+line 9215, in the error report of the original run, while the line named
+before (9240, the next piece) does not appear there.
 
+Method. Every round of the split run that took about 3600 s or more was rerun
+on the same file with `/trace /vcsCores:8 /timeLimit 1800` and the pieces
+dumped, so that each piece's finish time and verdict are visible and a piece
+that reaches the limit can be read off. The P6_5 files survived; the P6_16 and
+P6_19 round files were rebuilt from the surviving bam outputs and the saved
+Boogie reports (the rebuild is byte-identical to the originals where those
+survive). Per-piece tables: `reproduce/isolated-sites-pieces/`.
 
-| case, round     | marked asserts                                            | pieces | C sites mapped | sites finished (leak / proved) | all finished sites done by | stalled piece                                                                                                                                                                                   |
-| --------------- | --------------------------------------------------------- | ------ | -------------- | ------------------------------ | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| P5_1 step 2 r0  | 501 (48 taint sites)                                      | 0      | –              | 0                              | –                          | none reached: Boogie out of memory during VC generation after 7278 s                                                                                                                            |
-| P6_5 step 2 r0  | 268 (89 taint sites)                                      | 1246   | 84             | 84 (50 / 34)                   | 15 s sim., 213 s real      | none; longest piece 5.9 s                                                                                                                                                                       |
-| P6_5 step 3 r0  | 164 (73 C sites, the 71 step-2 sites + 2 invariant lines) | 765    | 66             | 65 (41 / 24)                   | 190 s sim.                 | piece 475 of 765 (62%): `$i104 == $i104.shadow`, the branch at `i15_muladd.c:147` in `br_i15_muladd_small` call 4, shadow line 9240; ran to the 1800 s limit                                    |
-| P6_16 step 2 r0 | 307 (116 taint sites)                                     | 1290   | 106            | 105 (50 / 55)                  | 52 s sim.                  | piece 203 of 1290 (16%): `$i24.dup == 0`, loop variable `u = k` of the loop at `i15_decred.c:78` in `br_i15_decode_reduce` call 2, bool line 2983; ran 4248 s although the limit was 1800 s     |
-| P6_19 step 2 r0 | 313 (121 taint sites)                                     | 1300   | 104            | 102 (45 / 57)                  | 69 s sim.                  | pieces 191, 324, 820 (15%, 25%, 63%): `$i10.dup == 0` at `i31_add.c:36` (calls 7 and 5, bool line 1765) and `$p3.dup == 0` at `i31_sub.c:36` (call 27, line 4548); each ran to the 3600 s limit |
+Two caveats found on the way:
 
+- `/vcsDumpSplits` changes Boogie's behaviour in later rounds. With dumping,
+  P6_16 step 2 round 1 finished in 271 s with no piece near the limit and 345
+  errors; without dumping the same file has one piece at the limit and 523
+  errors, as in the original run. So for rounds where the dumped run showed no
+  stall, the stalled piece was taken from a no-dump rerun and its assertion
+  read from the dump of the same round, which has the same piece count and
+  order.
+- Two kinds of limit hits. A piece reported as "TimeOut" is silently absent
+  from the error report. A piece reported as "Invalid" at exactly the limit is
+  listed in the error report as "might not hold". Both are marked below.
 
-Reading: pieces are dispatched in program order and finish in that order
-(P6_19: mean displacement 7 places), early sites are proved in well under a
-second each, and every site other than the stalled one is settled within a few
-minutes of simulated wall time. The stall is one piece in the middle of the
-program, not the late sites. In each case the stalled assertion is a taint or
-equality check on a loop-carried bignum index inside an inlined helper; the
-stock single VC proves it inside its round 0; the split run reports nothing for
-it (3.4); and from round 1, after the failing loop invariants are removed, both
-runs report it as failing within seconds. Some pieces ignore the per-query
-limit (P6_16: 4248 s under a 1800 s limit).
+**Stock run.** No round of the stock run recorded a time-out: every report
+ends with "N errors" and no "time outs" count. A stock round of about 4000 s
+is one query whose error loop takes that long as a whole, and Boogie gives no
+per-assertion time inside it. The per-assertion attribution therefore exists
+only for the split pieces.
 
-The 16 to 32 rows of the P6_5 step 3 table that the mapping leaves unattributed
-("unmapped") are wrapper-level pieces whose dumped assertion is already
-simplified by Boogie; all of them finished within the piece maximum above.
+**Split run, rounds of about 3600 s or more.** "piece k/N" is the position in
+program order; the assertion is given as the variable checked, the inlined
+call instance, the C site, and the line in the round's Boogie file where known.
+
+| case, round | original time | pieces at the limit | assertion |
+|---|---|---|---|
+| P5_1 step 2 r0 | 7278 s, OOM | none reached | Boogie ran out of memory building the VC; no piece was ever sent to Z3 |
+| P6_5 step 3 r0 | 3747 s | 475/765, Invalid at limit | `$i24 == $i24.shadow`, loop variable `u` of the loop at `i15_muladd.c:147`, `br_i15_muladd_small` call 4, shadow line 9215 |
+| P6_5 step 3 r1 | 5261 s | 298/765 TimeOut; 312/765 TimeOut | `$i10` equality at `i15_montmul.c:39`, `br_i15_montymul` call 3, line 7454; `$i8` equality (loop variable) at `i15_sub.c:36`, `br_i15_sub` call 18, line 6646 |
+| P6_5 step 3 r2 | 3661 s | 146/765 TimeOut | `$i14` equality at `i15_mulacc.c:45`, `br_i15_mulacc` call 1, line 3776 (plus two pieces of 1057 s and 575 s in `montymul` call 5 and `muladd_small` call 11 that did finish) |
+| P6_5 step 3 r3 | 3798 s | 358/765 TimeOut | `$i16` equality at `i15_montmul.c:39`, `br_i15_montymul` call 4, line 7475 |
+| P6_5 step 3 r4 | killed at cap | not traced | |
+| P6_16 step 2 r0 | 4332 s | 203/1290, Invalid at limit | `$i18.dup == 0`: the taint of `k = mblen - 1`, checked as the argument of `br_i15_decode(x, buf, k)` at `i15_decred.c:71`, `br_i15_decode_reduce` call 2 |
+| P6_16 step 2 r1 | 3669 s | 201/1290 TimeOut (no-dump rerun) | the pointer taint check before the `memset` in `br_i15_zero` call 2, `inner.h:1540` (the zeroing of `x` in `decode_reduce`); in the dumped form the assertion is already `0 == 0`, so the time is spent on the prefix, not on the goal |
+| P6_16 step 2 r3 | 7747 s | 765/1290 TimeOut (1901 s) | `$i23.dup == 0`, loop variable at `i15_muladd.c:147` on the loop back edge, `br_i15_muladd_small` call 6 |
+| P6_16 step 3 r0 | killed at cap | 286/770, Invalid at limit (rebuilt file, 2163 s with 8 workers) | `$i17 == $i17.shadow` at `i15_reduce.c:50`, `br_i15_reduce` call 0 |
+| P6_19 step 2 r0 | 3767 s | 191/1300 TimeOut; 324/1300 Invalid at limit; 820/1300 TimeOut | `$i6.dup == 0` at `i31_sub.c:37`, `br_i31_sub` call 25; `$i6.dup == 0` at `i31_add.c:36`, `br_i31_add` call 11; `$p22.dup == 0` at `i31_muladd.c:83`, `br_i31_muladd_small` call 5, line 3546 |
+| P6_19 step 2 r1 | 3774 s | 782/1300 (no-dump rerun) | `$i19.dup == 0`, loop variable on the back edge of the loop at `i31_muladd.c:128`, `br_i31_muladd_small` call 6 |
+| P6_19 step 2 r3 | 3798 s | 408/1300 and 1071/1300 (no-dump rerun) | loop-variable taint on the back edge at `i31_add.c:36`, `br_i31_add` call 10; `$p3.dup == 0` at `i31_sub.c:36`, `br_i31_sub` call 11 |
+| P6_19 step 2 r4 | 6603 s | 704/1300 TimeOut (2327 s under a 1800 s limit) | `$i10.dup == 0` at `i31_montmul.c:76`, `br_i31_montymul` call 5 |
+| P6_19 step 2 r5 | killed at cap | not traced | |
+| P6_19 step 3 r0 | never reached in the split run; file rebuilt from the stock marks | 12 pieces at the limit (4135 s with 8 workers) | equality checks at `i31_reduce.c:62` (call 0, `$p35`), `i31_muladd.c:91/97/128` (call 10: `$p46`, `$p68`, `$p73`, `$i20`), `i31_sub.c:37` (calls 27, 22, 14: `$i7`), `i31_add.c:36` (calls 12 and 4: `$i7`), `i31_muladd.c:43/91` (call 8: `$i5`, `$p41`) |
+
+What the list says. Every limit piece is a check on a loop index, a pointer
+into a limb array, or a length derived from the modulus header, inside an
+inlined bignum helper (`add`, `sub`, `mulacc`, `montymul`, `muladd_small`,
+`reduce`, `decode_reduce`, `zero`). The instance changes from round to round:
+removing the invariants that failed in one round moves the stall to a
+different call of the same helpers, not to the same assertion. P6_19's step 3
+has 12 such pieces in its first round alone. A fix therefore has to treat the
+class of obligations, not one site, which is what the three next steps in
+4.2 are aimed at.
 
 ## 4. Conclusion
 
