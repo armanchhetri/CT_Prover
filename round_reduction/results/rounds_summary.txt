@@ -1,0 +1,61 @@
+===== P6_5
+ bool: candidates in decrypt-bool-0.bpl: {'shadow_invariant': 72, 'unlikely_shadow_invariant': 51, 'likely_shadow_invariant': 9}
+  bool r0:     109 s  inv errors  93  unique lines  16  {'hold on entry': 93}  {'shadow_invariant': 16}  assertion errors 289
+  bool r1:     169 s  inv errors  30  unique lines  10  {'hold on entry': 30}  {'shadow_invariant': 10}  assertion errors 493
+  bool r2:     134 s  inv errors  24  unique lines   7  {'hold on entry': 24}  {'shadow_invariant': 7}  assertion errors 575
+  bool r3:     136 s  inv errors  10  unique lines   5  {'hold on entry': 8, 'be maintained': 2}  {'shadow_invariant': 4, 'likely_shadow_invariant': 1}  assertion errors 635
+  bool r4:     140 s  inv errors   6  unique lines   3  {'hold on entry': 6}  {'shadow_invariant': 3}  assertion errors 675
+  bool r5:     130 s  inv errors   4  unique lines   2  {'hold on entry': 4}  {'shadow_invariant': 2}  assertion errors 683
+  bool r6:     173 s  inv errors   2  unique lines   1  {'be maintained': 2}  {'shadow_invariant': 1}  assertion errors 695
+  bool r7:     151 s  inv errors   2  unique lines   1  {'hold on entry': 2}  {'shadow_invariant': 1}  assertion errors 697
+  bool r8:     167 s  inv errors   0  unique lines   0  {}  {}  assertion errors 701
+  bool: distinct invariant lines dropped = 45
+ shadow: candidates in decrypt-shadow-0.bpl: {'shadow_invariant': 44, 'unlikely_shadow_invariant': 51, 'likely_shadow_invariant': 1}
+  shadow r0:    3980 s  inv errors  81  unique lines  16  {'hold on entry': 81}  {'shadow_invariant': 16}  assertion errors 263
+  shadow r1:     453 s  inv errors  28  unique lines   9  {'hold on entry': 28}  {'shadow_invariant': 9}  assertion errors 493
+  shadow r2:    1005 s  inv errors  18  unique lines   4  {'hold on entry': 18}  {'shadow_invariant': 4}  assertion errors 559
+  shadow r3:     396 s  inv errors   8  unique lines   4  {'hold on entry': 8}  {'shadow_invariant': 4}  assertion errors 625
+  shadow r4:    4444 s  inv errors   6  unique lines   3  {'hold on entry': 6}  {'shadow_invariant': 3}  assertion errors 626
+  shadow r5:    1238 s  inv errors   4  unique lines   2  {'be maintained': 2, 'hold on entry': 2}  {'shadow_invariant': 1, 'likely_shadow_invariant': 1}  assertion errors 647
+  shadow r6:    3989 s  inv errors   2  unique lines   1  {'hold on entry': 2}  {'shadow_invariant': 1}  assertion errors 539
+  shadow r7:    4109 s  inv errors   1  unique lines   1  {'hold on entry': 1}  {'shadow_invariant': 1}  assertion errors 595
+  shadow r8: killed at cap  inv errors   0  unique lines   0  {}  {}  assertion errors 0
+  shadow: distinct invariant lines dropped = 40
+===== P6_16
+ bool: candidates in sign-bool-0.bpl: {'shadow_invariant': 75, 'unlikely_shadow_invariant': 50, 'likely_shadow_invariant': 9}
+  bool r0:     225 s  inv errors  93  unique lines  16  {'hold on entry': 93}  {'shadow_invariant': 16}  assertion errors 290
+  bool r1:     295 s  inv errors  30  unique lines  10  {'hold on entry': 30}  {'shadow_invariant': 10}  assertion errors 494
+  bool r2:     322 s  inv errors  24  unique lines   7  {'hold on entry': 24}  {'shadow_invariant': 7}  assertion errors 576
+  bool r3:     402 s  inv errors  10  unique lines   5  {'hold on entry': 8, 'be maintained': 2}  {'shadow_invariant': 4, 'likely_shadow_invariant': 1}  assertion errors 636
+  bool r4:     390 s  inv errors   6  unique lines   3  {'hold on entry': 6}  {'shadow_invariant': 3}  assertion errors 676
+  bool r5:     471 s  inv errors   4  unique lines   2  {'hold on entry': 4}  {'shadow_invariant': 2}  assertion errors 684
+  bool r6:     366 s  inv errors   2  unique lines   1  {'be maintained': 2}  {'shadow_invariant': 1}  assertion errors 696
+  bool r7:     340 s  inv errors   2  unique lines   1  {'hold on entry': 2}  {'shadow_invariant': 1}  assertion errors 698
+  bool r8:     426 s  inv errors   0  unique lines   0  {}  {}  assertion errors 702
+  bool: distinct invariant lines dropped = 45
+ shadow: candidates in sign-shadow-0.bpl: {'shadow_invariant': 44, 'unlikely_shadow_invariant': 50, 'likely_shadow_invariant': 1}
+  shadow r0:    1076 s  inv errors  93  unique lines  16  {'hold on entry': 93}  {'shadow_invariant': 16}  assertion errors 290
+  shadow r1:    4246 s  inv errors  20  unique lines   9  {'hold on entry': 20}  {'shadow_invariant': 9}  assertion errors 433
+  shadow r2:    1065 s  inv errors  18  unique lines   4  {'hold on entry': 18}  {'shadow_invariant': 4}  assertion errors 560
+  shadow r3:    5416 s  inv errors   7  unique lines   4  {'hold on entry': 7}  {'shadow_invariant': 4}  assertion errors 617
+  shadow r4:    2475 s  inv errors   6  unique lines   3  {'hold on entry': 6}  {'shadow_invariant': 3}  assertion errors 634
+  shadow r5: killed at cap  inv errors   0  unique lines   0  {}  {}  assertion errors 0
+  shadow: distinct invariant lines dropped = 36
+===== P6_19
+ bool: candidates in sign-bool-0.bpl: {'shadow_invariant': 75, 'unlikely_shadow_invariant': 53, 'likely_shadow_invariant': 10}
+  bool r0:     325 s  inv errors  93  unique lines  16  {'hold on entry': 93}  {'shadow_invariant': 16}  assertion errors 289
+  bool r1:     465 s  inv errors  30  unique lines  10  {'hold on entry': 30}  {'shadow_invariant': 10}  assertion errors 493
+  bool r2:     568 s  inv errors  24  unique lines   7  {'hold on entry': 24}  {'shadow_invariant': 7}  assertion errors 575
+  bool r3:     443 s  inv errors  10  unique lines   5  {'hold on entry': 8, 'be maintained': 2}  {'shadow_invariant': 4, 'likely_shadow_invariant': 1}  assertion errors 635
+  bool r4:     394 s  inv errors   6  unique lines   3  {'hold on entry': 6}  {'shadow_invariant': 3}  assertion errors 675
+  bool r5:     507 s  inv errors   4  unique lines   2  {'hold on entry': 4}  {'shadow_invariant': 2}  assertion errors 683
+  bool r6:     417 s  inv errors   2  unique lines   1  {'be maintained': 2}  {'shadow_invariant': 1}  assertion errors 695
+  bool r7:     685 s  inv errors   2  unique lines   1  {'hold on entry': 2}  {'shadow_invariant': 1}  assertion errors 697
+  bool r8:     354 s  inv errors   0  unique lines   0  {}  {}  assertion errors 701
+  bool: distinct invariant lines dropped = 45
+  shadow r0:    3816 s  inv errors  35  unique lines  12  {'hold on entry': 35}  {}  assertion errors 147
+  shadow r1:    4112 s  inv errors  12  unique lines   9  {'hold on entry': 12}  {}  assertion errors 205
+  shadow r2:    4370 s  inv errors   6  unique lines   5  {'hold on entry': 6}  {}  assertion errors 278
+  shadow r3:    4362 s  inv errors   7  unique lines   5  {'hold on entry': 7}  {}  assertion errors 449
+  shadow r4: killed at cap  inv errors   0  unique lines   0  {}  {}  assertion errors 0
+  shadow: distinct invariant lines dropped = 31

@@ -1,0 +1,6 @@
+P6_5: unique alarm lines round 0 47, final 160, new 113, new ones in procedures that lost an invariant 111
+    [('br_i15_modpow_opt', 44), ('br_i15_montymul', 22), ('br_i15_mulacc', 9), ('br_i15_reduce', 7), ('br_i15_from_monty', 6), ('br_i15_decode_reduce', 4), ('br_ccopy', 3), ('br_i15_decode', 3)]
+P6_16: unique alarm lines round 0 48, final 161, new 113, new ones in procedures that lost an invariant 111
+    [('br_i15_modpow_opt', 44), ('br_i15_montymul', 22), ('br_i15_mulacc', 9), ('br_i15_reduce', 7), ('br_i15_from_monty', 6), ('br_i15_decode_reduce', 4), ('br_ccopy', 3), ('br_i15_decode', 3)]
+P6_19: unique alarm lines round 0 47, final 160, new 113, new ones in procedures that lost an invariant 111
+    [('br_i31_modpow_opt', 44), ('br_i31_montymul', 22), ('br_i31_mulacc', 9), ('br_i31_reduce', 7), ('br_i31_from_monty', 6), ('br_i31_decode_reduce', 4), ('br_ccopy', 3), ('br_i31_decode', 3)]

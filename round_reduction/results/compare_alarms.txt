@@ -1,0 +1,2 @@
+p6_5: one-round step 3 71 locations, final step 2 71, equal True; last finished unchanged step-3 round (shadow7) 70, subset True, extra in one-round run [('i15_modpow2.c', 141)]
+p6_16: one-round step 3 72 locations, final step 2 72, equal True; last finished unchanged step-3 round (shadow4) 63, subset True, extra in one-round run [('i15_modpow2.c', 141), ('i15_montmul.c', 42), ('i15_montmul.c', 43), ('i15_montmul.c', 142), ('i15_montmul.c', 146), ('i15_montmul.c', 150), ('i15_montmul.c', 154), ('i15_montmul.c', 163), ('inner.h', 1539)]
