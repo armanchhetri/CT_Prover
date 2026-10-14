@@ -124,9 +124,12 @@ set equals the stock run's error set.
 order tracks it: piece 100 finished 98th, piece 900 finished 893rd, mean
 displacement 7 places. Early sites are indeed verified early.
 - 3 pieces hit the 3600 s limit: numbers 191, 324 and 820, that is 15%, 25% and
-63% through the program. They check `$i10.dup == 0` in `br_i31_add` inlined
-calls 7 and 5 (`i31_add.c:36`, bool line 1765) and `$p3.dup == 0` in
-`br_i31_sub` call 27 (`i31_sub.c:36`, bool line 4548). The stock single VC
+63% through the program. They check `$i6.dup == 0` in `br_i31_sub` call 25
+(`i31_sub.c:37`), `$i6.dup == 0` in `br_i31_add` call 11 (`i31_add.c:36`) and
+`$p22.dup == 0` in `br_i31_muladd_small` call 5 (`i31_muladd.c:83`, bool line
+3546). (The first version of this paragraph named the next piece in each
+case, add calls 7 and 5 and sub call 27, because of the off-by-one in the
+dump numbering explained in 3.6; corrected 2026-10-14.) The stock single VC
 proves these three inside its 325 s round 0. In round 1, after the invariant
 removal, both runs report them as failing.
 - Round time is therefore the per-query limit whenever one piece is hard, plus
@@ -200,20 +203,45 @@ call instance, the C site, and the line in the round's Boogie file where known.
 |---|---|---|---|
 | P5_1 step 2 r0 | 7278 s, OOM | none reached | Boogie ran out of memory building the VC; no piece was ever sent to Z3 |
 | P6_5 step 3 r0 | 3747 s | 475/765, Invalid at limit | `$i24 == $i24.shadow`, loop variable `u` of the loop at `i15_muladd.c:147`, `br_i15_muladd_small` call 4, shadow line 9215 |
-| P6_5 step 3 r1 | 5261 s | 298/765 TimeOut; 312/765 TimeOut | `$i10` equality at `i15_montmul.c:39`, `br_i15_montymul` call 3, line 7454; `$i8` equality (loop variable) at `i15_sub.c:36`, `br_i15_sub` call 18, line 6646 |
+| P6_5 step 3 r1 | 5261 s | 298/765 TimeOut (4979 s under the 1800 s limit); 312/765 TimeOut | `$i10` equality at `i15_montmul.c:39`, `br_i15_montymul` call 3, line 7454; `$i8` equality (loop variable) at `i15_sub.c:36`, `br_i15_sub` call 18, line 6646 |
 | P6_5 step 3 r2 | 3661 s | 146/765 TimeOut | `$i14` equality at `i15_mulacc.c:45`, `br_i15_mulacc` call 1, line 3776 (plus two pieces of 1057 s and 575 s in `montymul` call 5 and `muladd_small` call 11 that did finish) |
 | P6_5 step 3 r3 | 3798 s | 358/765 TimeOut | `$i16` equality at `i15_montmul.c:39`, `br_i15_montymul` call 4, line 7475 |
-| P6_5 step 3 r4 | killed at cap | not traced | |
-| P6_16 step 2 r0 | 4332 s | 203/1290, Invalid at limit | `$i18.dup == 0`: the taint of `k = mblen - 1`, checked as the argument of `br_i15_decode(x, buf, k)` at `i15_decred.c:71`, `br_i15_decode_reduce` call 2 |
-| P6_16 step 2 r1 | 3669 s | 201/1290 TimeOut (no-dump rerun) | the pointer taint check before the `memset` in `br_i15_zero` call 2, `inner.h:1540` (the zeroing of `x` in `decode_reduce`); in the dumped form the assertion is already `0 == 0`, so the time is spent on the prefix, not on the goal |
+| P6_5 step 3 r4 | killed at cap | not traced | no attribution; the round's file survives in the split run outputs, so a trace run would give it |
+| P6_16 step 2 r0 | 4332 s | 203/1290, Invalid at limit (4248 s under the 1800 s limit) | `$i18.dup == 0`: the taint of `k = mblen - 1`, checked as the argument of `br_i15_decode(x, buf, k)` at `i15_decred.c:71`, `br_i15_decode_reduce` call 2 |
+| P6_16 step 2 r1 | 3669 s | 201/1290 TimeOut (no-dump rerun; outputs not kept, see the note below) | the pointer taint check before the `memset` in `br_i15_zero` call 2, `inner.h:1540` (the zeroing of `x` in `decode_reduce`); in the dumped form the assertion is already `0 == 0`, so the time is spent on the prefix, not on the goal |
 | P6_16 step 2 r3 | 7747 s | 765/1290 TimeOut (1901 s) | `$i23.dup == 0`, loop variable at `i15_muladd.c:147` on the loop back edge, `br_i15_muladd_small` call 6 |
 | P6_16 step 3 r0 | killed at cap | 286/770, Invalid at limit (rebuilt file, 2163 s with 8 workers) | `$i17 == $i17.shadow` at `i15_reduce.c:50`, `br_i15_reduce` call 0 |
 | P6_19 step 2 r0 | 3767 s | 191/1300 TimeOut; 324/1300 Invalid at limit; 820/1300 TimeOut | `$i6.dup == 0` at `i31_sub.c:37`, `br_i31_sub` call 25; `$i6.dup == 0` at `i31_add.c:36`, `br_i31_add` call 11; `$p22.dup == 0` at `i31_muladd.c:83`, `br_i31_muladd_small` call 5, line 3546 |
-| P6_19 step 2 r1 | 3774 s | 782/1300 (no-dump rerun) | `$i19.dup == 0`, loop variable on the back edge of the loop at `i31_muladd.c:128`, `br_i31_muladd_small` call 6 |
-| P6_19 step 2 r3 | 3798 s | 408/1300 and 1071/1300 (no-dump rerun) | loop-variable taint on the back edge at `i31_add.c:36`, `br_i31_add` call 10; `$p3.dup == 0` at `i31_sub.c:36`, `br_i31_sub` call 11 |
-| P6_19 step 2 r4 | 6603 s | 704/1300 TimeOut (2327 s under a 1800 s limit) | `$i10.dup == 0` at `i31_montmul.c:76`, `br_i31_montymul` call 5 |
-| P6_19 step 2 r5 | killed at cap | not traced | |
+| P6_19 step 2 r1 | 3774 s | 782/1300 (no-dump rerun; outputs not kept) | `$i19.dup == 0`, loop variable on the back edge of the loop at `i31_muladd.c:128`, `br_i31_muladd_small` call 6 |
+| P6_19 step 2 r3 | 3798 s | 408/1300 and 1071/1300 (no-dump rerun; outputs not kept) | loop-variable taint on the back edge at `i31_add.c:36`, `br_i31_add` call 10; `$p3.dup == 0` at `i31_sub.c:36`, `br_i31_sub` call 11 |
+| P6_19 step 2 r4 | 6603 s | 704/1300 TimeOut (2327 s under the 1800 s limit; no-dump rerun, outputs not kept) | `$i10.dup == 0` at `i31_montmul.c:76`, `br_i31_montymul` call 5 |
+| P6_19 step 2 r5 | killed at cap | not traced | no attribution; same as P6_5 r4 |
 | P6_19 step 3 r0 | never reached in the split run; file rebuilt from the stock marks | 12 pieces at the limit (4135 s with 8 workers) | equality checks at `i31_reduce.c:62` (call 0, `$p35`), `i31_muladd.c:91/97/128` (call 10: `$p46`, `$p68`, `$p73`, `$i20`), `i31_sub.c:37` (calls 27, 22, 14: `$i7`), `i31_add.c:36` (calls 12 and 4: `$i7`), `i31_muladd.c:43/91` (call 8: `$i5`, `$p41`) |
+
+What is backed by a kept file, and what is not (checked 2026-10-14 against
+the tables in `reproduce/isolated-sites-pieces/`, without rerunning anything):
+
+- Backed by a per-piece table: P6_5 step 3 r0 to r3, P6_16 step 2 r0 and r3,
+  P6_16 step 3 r0, P6_19 step 2 r0 and P6_19 step 3 r0. For each of these the
+  piece number, helper, call instance, variable, C site and verdict above
+  were read back from the table.
+- Not backed by a kept file: P6_16 step 2 r1 and P6_19 step 2 r1, r3 and r4.
+  Their attribution came from no-dump reruns whose Boogie output was not
+  saved, so these four rows cannot be checked from the repository. Rerunning
+  those rounds with `/trace` (about one hour each) would settle them.
+- No attribution at all: the rounds killed at the 6 h cap (P6_5 step 3 r4,
+  P6_19 step 2 r5), and every stock round. The stock rounds of about 4000 s
+  (P6_5 step 3 r0, r4, r6, r7; P6_16 step 3 r1, r3; P6_19 step 3 r0 to r3)
+  are single queries that end with `0 verified, N errors` and no time-out
+  count, so Boogie gives no per-assertion time for them. The only way to get
+  it is the split form, which is what the rows above are.
+- "At the limit" means the piece stalled, not that it stopped at the limit:
+  Z3's limit is soft, and the stalled pieces ran 4248 s, 4979 s and 2387 s
+  under an 1800 s setting (P6_16 step 2 r0, P6_5 step 3 r1, P6_19 step 3 r0).
+- The tables of P6_5 step 3 r1 and r2 carry one piece (number 2) as
+  `NOT_DONE`: its trace line was not matched when the table was built. In
+  rounds 0 and 3 the same piece is a trivial `Valid` (the `i8` equality in
+  `br_i15_decode` call 1), so it is not a hidden stall.
 
 What the list says. Every limit piece is a check on a loop index, a pointer
 into a limb array, or a length derived from the modulus header, inside an
